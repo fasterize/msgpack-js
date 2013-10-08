@@ -378,9 +378,28 @@ function encode(value, buffer, offset) {
       size = 5;
     }
 
-    if (isArray) {
-      for (var i = 0; i < length; i++) {
-        size += encode(value[i], buffer, offset + size);
+    if (isArray && length > 0) {
+      if (value.every(function(e) { return bops.is(e) })) {
+        length = value.reduce(function(size, e) { return size + e.length }, 0);
+        // buffer 16
+        if (length < 0x10000) {
+          buffer[offset] = 0xd8;
+          bops.writeUInt16BE(buffer, length, offset + 1);
+          size = 3;
+          value.forEach(function(e) { bops.copy(e, buffer, offset + size); size += e.length; });
+        }
+        // buffer 32
+        else if (length < 0x100000000) {
+          buffer[offset] = 0xd9;
+          bops.writeUInt32BE(buffer, length, offset + 1);
+          size = 5;
+          value.forEach(function(e) { bops.copy(e, buffer, offset + size); size += e.length; });
+        }
+      }
+      else {
+        for (var i = 0; i < length; i++) {
+          size += encode(value[i], buffer, offset + size);
+        }
       }
     }
     else {
@@ -472,10 +491,20 @@ function sizeof(value) {
     }
 
     size = 0;
-    if (Array.isArray(value)) {
-      length = value.length;
-      for (var i = 0; i < length; i++) {
-        size += sizeof(value[i]);
+    if (Array.isArray(value) && value.length > 0) {
+      if (value.every(function(e) { return bops.is(e) })) {
+        length = value.reduce(function(size, e) { return size + e.length }, 0);
+        if (length < 0x10000) {
+          return 3 + length;
+        }
+        if (length < 0x100000000) {
+          return 5 + length;
+        }
+      } else {
+        length = value.length;
+        for (var i = 0; i < length; i++) {
+          size += sizeof(value[i]);
+        }
       }
     }
     else {

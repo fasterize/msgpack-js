@@ -47,6 +47,13 @@ test('codec works as expected', function(assert) {
 
 });
 
+test('array of buffers is encoded as a single buffer', function(assert) {
+  var output = msgpack.decode(msgpack.encode([new Buffer('test1'), new Buffer('test2')]));
+  assert.true(bops.is(output));
+  assert.equal('test1test2', output.toString());
+  assert.end();
+});
+
 function Foo () {
   this.instance = true
 }
